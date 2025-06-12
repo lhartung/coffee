@@ -1,0 +1,140 @@
+- name: Prepare host
+  hosts: aws
+  become: true
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        pkg:
+          - docker.io
+          - docker-compose
+          - nginx
+          - sqlite3
+          - vim
+        update_cache: yes
+
+- name: Create certificates
+  hosts: aws
+  become: true
+  tasks:
+    - name: Install certbot snap
+      community.general.snap:
+        classic: true
+        name:
+          - certbot
+
+    - name: Fetch lhartung.com certificate
+      ansible.builtin.command:
+        cmd: certbot certonly -n --webroot -w {{ webroot }} -d lhartung.com -d www.lhartung.com
+      register: output
+      changed_when: "'Successfully received certificate' in output.stdout"
+
+    - name: Fetch coffee.lhartung.com certificate
+      ansible.builtin.command:
+        cmd: certbot certonly -n --webroot -w {{ webroot }} -d coffee.lhartung.com -d coffee2.lhartung.com
+      register: output
+      changed_when: "'Successfully received certificate' in output.stdout"
+
+    - name: Fetch catonablog.com certificate
+      ansible.builtin.command:
+        cmd: certbot certonly -n --webroot -w {{ webroot }} -d catonablog.com -d www.catonablog.com -d wordpress.lhartung.com
+      register: output
+      changed_when: "'Successfully received certificate' in output.stdout"
+
+    - name: Fetch influxdb2.lhartung.com certificate
+      ansible.builtin.command:
+        cmd: certbot certonly -n --webroot -w {{ webroot }} -d influxdb2.lhartung.com
+      register: output
+      changed_when: "'Successfully received certificate' in output.stdout"
+
+- name: Configure nginx
+  hosts: aws
+  become: true
+  roles:
+    - nginx
+
+- name: Create Docker containers
+  hosts: aws
+  become: true
+  tasks:
+    - name: Ensure volumes directory exists
+      ansible.builtin.file:
+        path: /var/volumes
+        state: directory
+
+    - name: Ensure volume directory exists for each container
+      ansible.builtin.file:
+        path: "/var/volumes/{{ item }}"
+        state: directory
+      loop: "{{ containers }}"
+
+    - name: Create homemealplan container
+      community.docker.docker_container:
+        image: homemealplan
+        name: homemealplan
+        memory: "200M"
+        memory_reservation: "100M"
+        published_ports:
+          - "127.0.0.1:3000:3000"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/homemealplan/mealplanner.db:/app/mealplanner.db"
+
+    - name: Create myfreezer container
+      community.docker.docker_container:
+        image: myfreezer
+        name: myfreezer
+        memory: "200M"
+        memory_reservation: "100M"
+        published_ports:
+          - "127.0.0.1:6000:6000"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/myfreezer/classifier.json:/usr/src/app/classifier.json"
+          - "{{ volume_directory }}/myfreezer/classifier.onnx:/usr/src/app/classifier.onnx"
+          - "{{ volume_directory }}/myfreezer/myfreezer.db:/usr/src/app/myfreezer.db"
+
+    - name: Create database bridge network
+      ansible.builtin.docker_network:
+        name: database_bridge
+        driver: bridge
+
+    - name: Create mariadb container
+      community.docker.docker_container:
+        image: mariadb
+        name: mariadb
+        networks:
+          - name: database_bridge
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/mariadb:/var/lib/mysql"
+
+    - name: Create wordpress container
+      community.docker.docker_container:
+        env:
+          WORDPRESS_DB_HOST: mariadb
+          WORDPRESS_DB_USER: wordpress
+          WORDPRESS_DB_PASSWORD: queib0Yiiy6eivie
+          WORDPRESS_DB_NAME: wordpress
+          WORDPRESS_DEBUG: "false"
+        image: wordpress
+        name: wordpress
+        networks:
+          - name: database_bridge
+        published_ports:
+          - "127.0.0.1:8000:80"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/wordpress/upload.ini:/usr/local/etc/php/conf.d/uploads.ini"
+          - "{{ volume_directory }}/wordpress/php.ini-production:/usr/local/etc/php/php.ini-production"
+          - "{{ volume_directory }}/wordpress/public:/var/www/html"
+
+    - name: Create influxdb2 container
+      community.docker.docker_container:
+        image: influxdb:2
+        name: influxdb2
+        published_ports:
+          - "127.0.0.1:8086:8086"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/influxdb2/config:/etc/influxdb2"
+          - "{{ volume_directory }}/influxdb2/data:/var/lib/influxdb2"

@@ -1,0 +1,36 @@
+---
+- name: Copy coffee site file
+  ansible.builtin.copy:
+    src: coffee
+    dest: /etc/nginx/sites-enabled/coffee
+    mode: '0644'
+
+- name: Copy influxdb2 site file
+  ansible.builtin.copy:
+    src: influxdb2
+    dest: /etc/nginx/sites-enabled/influxdb2
+    mode: '0644'
+
+- name: Copy lhartung site file
+  ansible.builtin.copy:
+    src: lhartung
+    dest: /etc/nginx/sites-enabled/lhartung
+    mode: '0644'
+
+- name: Copy wordpress site file
+  ansible.builtin.copy:
+    src: wordpress
+    dest: /etc/nginx/sites-enabled/wordpress
+    mode: '0644'
+
+- name: Remove the default site file
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Enable service nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true
+    masked: no
+    state: restarted

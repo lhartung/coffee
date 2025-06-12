@@ -1,0 +1,15 @@
+aws:
+  hosts:
+    coffee.lhartung.com:
+      ansible_user: ubuntu
+
+      containers:
+        - homemealplan
+        - influxdb2
+        - mariadb
+        - myfreezer
+        - wordpress
+
+      volume_directory: /var/volumes
+
+      webroot: /var/www/html
