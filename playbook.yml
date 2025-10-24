@@ -46,6 +46,12 @@
       register: output
       changed_when: "'Successfully received certificate' in output.stdout"
 
+    - name: Fetch vikunja.lhartung.com certificate
+      ansible.builtin.command:
+        cmd: certbot certonly -n --webroot -w {{ webroot }} -d vikunja.lhartung.com
+      register: output
+      changed_when: "'Successfully received certificate' in output.stdout"
+
 - name: Configure nginx
   hosts: aws
   become: true
@@ -138,3 +144,34 @@
         volumes:
           - "{{ volume_directory }}/influxdb2/config:/etc/influxdb2"
           - "{{ volume_directory }}/influxdb2/data:/var/lib/influxdb2"
+
+    - name: Ensure vikunja data directories exist
+      ansible.builtin.file:
+        path: "/var/volumes/vikunja/{{ item }}"
+        state: directory
+        owner: 1000
+        group: 1000
+      loop:
+        - db
+        - files
+
+    - name: Copy coffee site file
+      ansible.builtin.copy:
+        src: vikunja/config.yml
+        dest: /var/volumes/vikunja/config.yml
+        mode: '0644'
+
+    - name: Create vikunja container
+      community.docker.docker_container:
+        image: vikunja/vikunja
+        name: vikunja
+        env:
+          VIKUNJA_SERVICE_ROOTPATH: /app/vikunja
+          VIKUNJA_DATABASE_PATH: /app/vikunja/db/vikunja.db
+        published_ports:
+          - "127.0.0.1:3456:3456"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/vikunja/config.yml:/etc/vikunja/config.yml"
+          - "{{ volume_directory }}/vikunja/db:/app/vikunja/db"
+          - "{{ volume_directory }}/vikunja/files:/app/vikunja/files"

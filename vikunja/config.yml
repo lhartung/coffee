@@ -1,0 +1,11 @@
+database:
+  type: sqlite
+  path: /app/vikunja/db/vikunja.db
+
+files:
+  basepath: /app/vikunja/files
+
+service:
+  enableregistration: true
+  publicurl: https://vikunja.lhartung.com
+  timezone: America/Chicago

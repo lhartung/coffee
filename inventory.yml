@@ -8,6 +8,7 @@ aws:
         - influxdb2
         - mariadb
         - myfreezer
+        - vikunja
         - wordpress
 
       volume_directory: /var/volumes
