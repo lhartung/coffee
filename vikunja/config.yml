@@ -6,6 +6,6 @@ files:
   basepath: /app/vikunja/files
 
 service:
-  enableregistration: true
+  enableregistration: false
   publicurl: https://vikunja.lhartung.com
   timezone: America/Chicago

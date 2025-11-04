@@ -175,3 +175,24 @@
           - "{{ volume_directory }}/vikunja/config.yml:/etc/vikunja/config.yml"
           - "{{ volume_directory }}/vikunja/db:/app/vikunja/db"
           - "{{ volume_directory }}/vikunja/files:/app/vikunja/files"
+
+    - name: Create DailyTxT container
+      tags:
+        - dailytxt
+      community.docker.docker_container:
+        image: phitux/dailytxt:2.0.0-testing.7
+        name: dailytxt
+        env:
+          SECRET_TOKEN: "CMMAp/bfqoYeKCXHKlyp6IAfABlKTb/TopuWJvRyA14="
+          INDENT: "4"
+          ALLOW_REGISTRATION: "false"
+          ADMIN_PASSWORD: "wohchaeZ2Ua5edai"
+          LOGOUT_AFTER_DAYS: "30"
+          BASE_PATH: "/dailytxt"
+        memory: "200M"
+        memory_reservation: "100M"
+        published_ports:
+          - "127.0.0.1:8080:80"
+        restart_policy: always
+        volumes:
+          - "{{ volume_directory }}/dailytxt:/data"

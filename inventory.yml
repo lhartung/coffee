@@ -10,6 +10,7 @@ aws:
         - myfreezer
         - vikunja
         - wordpress
+        - dailytxt
 
       volume_directory: /var/volumes
 
